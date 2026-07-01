@@ -98,5 +98,5 @@ El workflow ya incluye:
 ## Desarrollador
 
 - Eliazar de la paz
-- Website: [edelapaz@gmail.com] (https://delapazweb.com)
-- Email: [edelapaz@gmail.com] (edelapaz@gmail.com)
+- Website: (https://delapazweb.com)
+- Email: (edelapaz@gmail.com)
