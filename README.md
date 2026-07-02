@@ -32,6 +32,12 @@ Implementar una calculadora simple orientada a buenas prácticas de pruebas:
 
 La clase CalculadoraService implementa el método Sumar(a, b), y además registra el evento en un logger.
 
+En la app de consola, el logger está organizado así:
+
+- ConsoleLogger con método estático Log(string mensaje).
+- ConsoleLoggerAdapter que implementa ILogger y delega en ConsoleLogger.
+- Namespace con nombre: Calculadora.App.Logging.
+
 Comportamiento validado por pruebas:
 
 - Retorna la suma correcta.
@@ -74,13 +80,14 @@ El archivo de cobertura coverage.opencover.xml se usa en el análisis de SonarQu
 
 El workflow en [ .github/workflows/dotnet.yml ](.github/workflows/dotnet.yml) hace lo siguiente en cada push a main y eventos de pull request:
 
-1. Configura JDK 17.
-2. Configura .NET 10.
-3. Restaura cache de SonarQube Cloud.
-4. Instala o reutiliza dotnet-sonarscanner.
-5. Ejecuta análisis begin.
-6. Compila y corre pruebas con cobertura.
-7. Ejecuta análisis end y publica resultados.
+1. Configura .NET 10.
+2. Instala dotnet-sonarscanner (solo cuando SONAR_TOKEN está disponible y el PR no es de fork externo).
+3. Inicia análisis de SonarCloud (begin) con ruta de cobertura OpenCover.
+4. Restaura dependencias.
+5. Compila en configuración Release.
+6. Ejecuta pruebas en Release con cobertura OpenCover.
+7. Copia coverage.opencover.xml al workspace.
+8. Finaliza análisis de SonarCloud (end) cuando aplica.
 
 ## Configuración de SonarQube Cloud
 
@@ -89,6 +96,10 @@ Para que el análisis funcione en GitHub Actions:
 1. Ir al repositorio en GitHub.
 2. Abrir Settings > Secrets and variables > Actions.
 3. Crear el secret SONAR_TOKEN.
+
+Nota:
+
+- En pull requests desde forks externos, los secretos no se exponen por seguridad. En ese caso, el pipeline sigue ejecutando build y tests, pero omite SonarCloud.
 
 El workflow ya incluye:
 
