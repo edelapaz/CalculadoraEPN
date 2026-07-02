@@ -2,53 +2,66 @@ name: .NET CI con SonarCloud
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-test-analyze:
     runs-on: ubuntu-latest
+    env:
+      BUILD_CONFIGURATION: Release
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
     steps:
-    - name: Checkout del código
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout del código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
 
-    - name: Instalar SonarScanner
-      run: dotnet tool install --global dotnet-sonarscanner
+      - name: Instalar SonarScanner
+        if: ${{ env.SONAR_TOKEN != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        run: dotnet tool install --global dotnet-sonarscanner
 
-    - name: Iniciar análisis de SonarCloud
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      # Apuntamos el escáner EXACTAMENTE a la raíz del servidor
-      run: dotnet sonarscanner begin /k:"jabin25live_Calculadora" /o:"jabin25live" /d:sonar.token="$SONAR_TOKEN" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage.opencover.xml"
+      - name: Agregar herramientas globales de .NET al PATH
+        if: ${{ env.SONAR_TOKEN != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-    - name: Compilar el proyecto
-      run: dotnet build
+      - name: Iniciar análisis de SonarCloud
+        if: ${{ env.SONAR_TOKEN != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+        run: |
+          dotnet sonarscanner begin \
+          /k:"edelapaz_CalculadoraEPN" \
+          /o:"edelapaz" \
+          /d:sonar.token="$SONAR_TOKEN" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.cs.opencover.reportsPaths="${{ github.workspace }}/coverage.opencover.xml"
 
-    - name: Ejecutar pruebas y generar XML nativo
-      # Usamos el recolector nativo de xUnit para asegurar que el XML se genere
-      run: dotnet test --no-build --collect:"XPlat Code Coverage;Format=opencover" --results-directory ./TestResults
+      - name: Restaurar dependencias
+        run: dotnet restore
 
-    - name: Rescatar archivo y verificar (Operación a la fuerza)
-      # Buscamos el XML en las carpetas temporales, lo copiamos a la raíz y leemos su contenido
-      run: |
-        find ./TestResults -name "coverage.opencover.xml" -exec cp {} ${{ github.workspace }}/coverage.opencover.xml \;
-        echo "Archivo movido a la raíz con éxito. Tamaño:"
-        ls -la ${{ github.workspace }}/coverage.opencover.xml
-        echo "Mostrando las primeras líneas para confirmar que tiene datos:"
-        cat ${{ github.workspace }}/coverage.opencover.xml | head -n 15
+      - name: Compilar el proyecto
+        run: dotnet build --no-restore --configuration $BUILD_CONFIGURATION
 
-    - name: Finalizar análisis y enviar a SonarCloud
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+      - name: Ejecutar pruebas y generar cobertura
+        run: dotnet test --no-build --configuration $BUILD_CONFIGURATION --collect:"XPlat Code Coverage;Format=opencover" --results-directory ./TestResults
+
+      - name: Rescatar archivo de cobertura
+        run: |
+          find ./TestResults -name "coverage.opencover.xml" -exec cp {} ${{ github.workspace }}/coverage.opencover.xml \;
+          ls -la ${{ github.workspace }}/coverage.opencover.xml
+
+      - name: Finalizar análisis y enviar a SonarCloud
+        if: ${{ env.SONAR_TOKEN != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
