@@ -100,3 +100,5 @@ El workflow ya incluye:
 - Eliazar de la paz
 - Website: (https://delapazweb.com)
 - Email: (edelapaz@gmail.com)
+
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=edelapaz_CalculadoraEPN&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=edelapaz_CalculadoraEPN)
